@@ -1,0 +1,83 @@
+<html>
+<head>
+    <title>Listener</title>
+    <style>
+        table, table tr, table tr th, table tr td { border:1px solid #0094ff; }
+        table {text-align: center; border-collapse: collapse;}
+    </style>
+</head>
+    <table>
+        <thead>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Addresses</th>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{.device.Name}}</td>
+                <td>{{.device.Description}}</td>
+                <td>{{JSONS .device.Addresses | ByteToStr}}</td>
+            </tr>
+        </tbody>
+    </table>
+    <hr />
+    <table id="dataTable">
+        <tbody>
+        </tbody>
+    </table>
+<body>
+<script type="text/javascript">
+    window.onload = function() {
+        getClientId()
+    };
+    window.onbeforeunload = function () {
+        console.log("socket close")
+        sock.close()
+        closeWs();
+    };
+
+    let clientId;
+    let devName = {{.device.Name}};
+    let tb = document.querySelector("#dataTable tbody");
+    let sock = null;
+    let msg = {
+        Method: "",
+        Name: ""
+    }
+
+    function getClientId() {
+        fetch("/getClientId")
+            .then(res => res.text(), err => console.error('Request failed', err))
+            .then(data => {
+                clientId = data;
+                wsConn();
+            });
+    }
+
+    function wsConn() {
+        let uri = "ws://" + {{.ip}} + ":" + {{.port}} + "/ws?clientId=" + clientId + "&devName=" + devName;
+        sock = new WebSocket(uri);
+        sock.onopen = function() {
+            console.log("connected to " + uri);
+        }
+        sock.onclose = function(e) {
+            closeWs();
+        }
+        sock.onmessage = function(e) {
+            let node = document.createElement("tr")
+            node.innerHTML = e.data
+            if (tb.rows.length >= 500) {
+                tb.rows[0].remove()
+            }
+            tb.appendChild(node)
+        }
+    }
+
+    function closeWs() {
+        fetch("/closeWs?clientId=" + clientId)
+            .then(res => res.text(), err => console.error('Request failed', err))
+            .then();
+    }
+</script>
+</body>
+</html>
